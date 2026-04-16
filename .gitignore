@@ -1,0 +1,8 @@
+node_modules/
+dist/
+receitas.json
+*.db
+.env
+.DS_Store
+Thumbs.db
+.claude/
