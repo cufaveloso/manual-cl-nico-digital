@@ -445,7 +445,9 @@ function DrugTag({ drug }) {
       <button
         onClick={copy}
         title="Copiar"
-        className="opacity-0 group-hover:opacity-100 text-xs text-gray-400 hover:text-blue-600 px-1.5 py-0.5 rounded hover:bg-blue-50 shrink-0"
+        className={`text-xs px-1.5 py-0.5 rounded shrink-0 transition-colors ${
+          copied ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+        }`}
       >{copied ? '✓' : '⧉'}</button>
     </div>
   )

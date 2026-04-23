@@ -154,6 +154,7 @@ const SCORES = {
 
   // ── SOFA ───────────────────────────────────────────────────────────────────
   sofa: {
+    requiresInteraction: true,
     name: 'SOFA',
     desc: 'Disfunção orgânica na sépsis (Sequential Organ Failure Assessment)',
     ref: 'Sepsis-3 2016',
@@ -219,26 +220,31 @@ const SCORES = {
     ref: 'RCP 2017',
     fields: [
       { id: 'rr', type: 'select', label: 'Frequência respiratória (rpm)', options: [
-        { label: '≤ 8', value: 3 }, { label: '9–11', value: 1 }, { label: '12–20', value: 0 },
-        { label: '21–24', value: 2 }, { label: '≥ 25', value: 3 },
+        { label: '12–20 (normal)', value: 0 },
+        { label: '9–11', value: 1 }, { label: '21–24', value: 2 },
+        { label: '≤ 8', value: 3 }, { label: '≥ 25', value: 3 },
       ]},
       { id: 'spo2', type: 'select', label: 'SpO₂ — Escala 1 (sem hipercápnia habitual)', options: [
-        { label: '≤ 91%', value: 3 }, { label: '92–93%', value: 2 }, { label: '94–95%', value: 1 }, { label: '≥ 96%', value: 0 },
+        { label: '≥ 96% (normal)', value: 0 },
+        { label: '94–95%', value: 1 }, { label: '92–93%', value: 2 }, { label: '≤ 91%', value: 3 },
       ]},
       { id: 'o2', type: 'select', label: 'Oxigênio suplementar', options: [
         { label: 'Não (ar ambiente)', value: 0 }, { label: 'Sim (qualquer O₂)', value: 2 },
       ]},
       { id: 'temp', type: 'select', label: 'Temperatura (°C)', options: [
-        { label: '≤ 35,0', value: 3 }, { label: '35,1–36,0', value: 1 }, { label: '36,1–38,0', value: 0 },
-        { label: '38,1–39,0', value: 1 }, { label: '≥ 39,1', value: 2 },
+        { label: '36,1–38,0 (normal)', value: 0 },
+        { label: '35,1–36,0', value: 1 }, { label: '38,1–39,0', value: 1 },
+        { label: '≥ 39,1', value: 2 }, { label: '≤ 35,0', value: 3 },
       ]},
       { id: 'sbp', type: 'select', label: 'Pressão arterial sistólica (mmHg)', options: [
-        { label: '≤ 90', value: 3 }, { label: '91–100', value: 2 }, { label: '101–110', value: 1 },
-        { label: '111–219', value: 0 }, { label: '≥ 220', value: 3 },
+        { label: '111–219 (normal)', value: 0 },
+        { label: '101–110', value: 1 }, { label: '91–100', value: 2 },
+        { label: '≤ 90', value: 3 }, { label: '≥ 220', value: 3 },
       ]},
       { id: 'hr', type: 'select', label: 'Frequência cardíaca (bpm)', options: [
-        { label: '≤ 40', value: 3 }, { label: '41–50', value: 1 }, { label: '51–90', value: 0 },
-        { label: '91–110', value: 1 }, { label: '111–130', value: 2 }, { label: '≥ 131', value: 3 },
+        { label: '51–90 (normal)', value: 0 },
+        { label: '41–50', value: 1 }, { label: '91–110', value: 1 },
+        { label: '111–130', value: 2 }, { label: '≤ 40', value: 3 }, { label: '≥ 131', value: 3 },
       ]},
       { id: 'avpu', type: 'select', label: 'Nível de consciência (AVPU)', options: [
         { label: 'A — Alerta', value: 0 }, { label: 'V / P / U — Confuso, à Dor ou Inconsciente', value: 3 },
@@ -264,6 +270,7 @@ const SCORES = {
 
   // ── Glasgow ────────────────────────────────────────────────────────────────
   glasgow: {
+    requiresInteraction: true,
     name: 'Escala de Glasgow',
     desc: 'Nível de consciência e gravidade do coma',
     ref: 'Teasdale & Jennett 1974',
@@ -487,13 +494,15 @@ function ScoreCalculator({ score }) {
     else initVals[f.id] = ''
   })
   const [vals, setVals] = useState(initVals)
+  const [touched, setTouched] = useState(false)
 
-  function reset() { setVals(initVals) }
-  function set(id, val) { setVals(p => ({ ...p, [id]: val })) }
+  function reset() { setVals(initVals); setTouched(false) }
+  function set(id, val) { setVals(p => ({ ...p, [id]: val })); setTouched(true) }
 
   const hasInput = score.fields.some(f => f.type === 'number')
   const allFilled = !hasInput || score.fields.filter(f => f.type === 'number').every(f => vals[f.id] !== '')
-  const result = allFilled ? score.calculate(vals) : null
+  const showResult = allFilled && (!score.requiresInteraction || touched)
+  const result = showResult ? score.calculate(vals) : null
   const c = result ? (COLOR_CLASSES[result.color] || COLOR_CLASSES.green) : null
 
   return (

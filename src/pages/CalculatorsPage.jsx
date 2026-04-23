@@ -15,6 +15,7 @@ function Result({ label, value, unit, note, color = 'blue' }) {
     blue:   'bg-blue-50 border-blue-300 text-blue-800',
     green:  'bg-green-50 border-green-300 text-green-800',
     yellow: 'bg-yellow-50 border-yellow-300 text-yellow-800',
+    orange: 'bg-orange-50 border-orange-300 text-orange-800',
     red:    'bg-red-50 border-red-300 text-red-800',
   }
   return (
