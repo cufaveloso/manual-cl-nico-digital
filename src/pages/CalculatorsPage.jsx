@@ -1,15 +1,7 @@
 import React, { useState } from 'react'
 
-// ─── Calculadores ────────────────────────────────────────────────────────────
+// ─── Shared components ────────────────────────────────────────────────────────
 
-const CALC_GROUPS = [
-  { id: 'dose',   label: 'Dose',         icon: '💊', items: ['dose_weight', 'infusion_rate', 'pediatric_dose'] },
-  { id: 'renal',  label: 'Renal',        icon: '💧', items: ['cockcroft', 'renal_adjust'] },
-  { id: 'electro',label: 'Electrólitos', icon: '🧪', items: ['na_correction', 'ca_correction', 'osmolarity'] },
-  { id: 'other',  label: 'Outros',       icon: '📐', items: ['bmi', 'ibw', 'map_calc'] },
-]
-
-// ─── Componente genérico de resultado ────────────────────────────────────────
 function Result({ label, value, unit, note, color = 'blue' }) {
   const colors = {
     blue:   'bg-blue-50 border-blue-300 text-blue-800',
@@ -19,7 +11,7 @@ function Result({ label, value, unit, note, color = 'blue' }) {
     red:    'bg-red-50 border-red-300 text-red-800',
   }
   return (
-    <div className={`rounded-xl border-2 p-4 ${colors[color]}`}>
+    <div className={`rounded-xl border-2 p-4 ${colors[color] || colors.blue}`}>
       <div className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">{label}</div>
       <div className="text-2xl font-bold">{value} <span className="text-base font-normal">{unit}</span></div>
       {note && <div className="text-sm mt-1 opacity-80">{note}</div>}
@@ -61,7 +53,7 @@ function Select({ label, value, onChange, options }) {
   )
 }
 
-// ─── Calculadores individuais ─────────────────────────────────────────────────
+// ─── Calculadores ─────────────────────────────────────────────────────────────
 
 function DoseByWeight() {
   const [weight, setWeight] = useState('')
@@ -76,7 +68,7 @@ function DoseByWeight() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Peso do doente (kg)" value={weight} onChange={setWeight} min={1} step={0.1} placeholder="ex: 70" />
+        <Field label="Peso (kg)" value={weight} onChange={setWeight} min={1} step={0.1} placeholder="ex: 70" />
         <Field label={`Dose (${unit}/kg)`} value={dosePerKg} onChange={setDosePerKg} min={0} step={0.01} placeholder="ex: 15" />
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -85,9 +77,9 @@ function DoseByWeight() {
           { value: 'UI', label: 'UI' }, { value: 'mL', label: 'mL' },
         ]} />
         <Select label="Frequência (tomas/dia)" value={freq} onChange={setFreq} options={[
-          { value: '1', label: '1 × ao dia' }, { value: '2', label: '2 × ao dia (12/12h)' },
-          { value: '3', label: '3 × ao dia (8/8h)' }, { value: '4', label: '4 × ao dia (6/6h)' },
-          { value: '6', label: '6 × ao dia (4/4h)' },
+          { value: '1', label: '1 × dia' }, { value: '2', label: '2 × dia (12/12h)' },
+          { value: '3', label: '3 × dia (8/8h)' }, { value: '4', label: '4 × dia (6/6h)' },
+          { value: '6', label: '6 × dia (4/4h)' },
         ]} />
       </div>
       {total && (
@@ -106,12 +98,11 @@ function InfusionRate() {
   const [duration, setDuration] = useState('')
   const [unit, setUnit] = useState('mg')
 
-  const concNum  = parseFloat(concentration) // mg/mL
-  const doseNum  = parseFloat(totalDose)
-  const durNum   = parseFloat(duration)
-
-  const volume   = concNum && doseNum ? (doseNum / concNum).toFixed(1) : null
-  const rate     = volume && durNum ? (parseFloat(volume) / durNum).toFixed(1) : null
+  const concNum = parseFloat(concentration)
+  const doseNum = parseFloat(totalDose)
+  const durNum  = parseFloat(duration)
+  const volume  = concNum && doseNum ? (doseNum / concNum).toFixed(1) : null
+  const rate    = volume && durNum ? (parseFloat(volume) / durNum).toFixed(1) : null
 
   return (
     <div className="space-y-4">
@@ -142,24 +133,21 @@ function PediatricDose() {
   const ageNum = parseFloat(age)
   const wtNum  = parseFloat(weight)
 
-  // Fórmula de Holliday-Segar (mL/dia)
   let fluidDay = null
   if (wtNum) {
-    if (wtNum <= 10)       fluidDay = wtNum * 100
-    else if (wtNum <= 20)  fluidDay = 1000 + (wtNum - 10) * 50
-    else                   fluidDay = 1500 + (wtNum - 20) * 20
+    if (wtNum <= 10)      fluidDay = wtNum * 100
+    else if (wtNum <= 20) fluidDay = 1000 + (wtNum - 10) * 50
+    else                  fluidDay = 1500 + (wtNum - 20) * 20
   }
   const fluidHour = fluidDay ? (fluidDay / 24).toFixed(0) : null
 
-  // Peso estimado por idade (Broselow / Fórmula simples)
   let estWeight = null
-  if (ageNum) {
+  if (ageNum && !weight) {
     if (ageNum < 1)       estWeight = null
     else if (ageNum <= 5) estWeight = (ageNum * 2 + 8).toFixed(0)
     else                  estWeight = (ageNum * 3 + 7).toFixed(0)
   }
 
-  // RCP pediátrica
   const comprDepth = wtNum ? `${Math.min(Math.round(wtNum * 0.08), 6)} cm` : null
   const defibJoule = wtNum ? `${Math.round(wtNum * 2)} J (4 J/kg refractário)` : null
 
@@ -167,11 +155,11 @@ function PediatricDose() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <Field label="Idade (anos)" value={age} onChange={setAge} min={0} step={0.25} placeholder="ex: 3" />
-        <Field label="Peso (kg) — deixar em branco para estimar" value={weight} onChange={setWeight} min={0.5} step={0.5} placeholder="ex: 15" />
+        <Field label="Peso (kg) — opcional" value={weight} onChange={setWeight} min={0.5} step={0.5} placeholder="ex: 15" />
       </div>
 
-      {ageNum > 0 && !weight && estWeight && (
-        <Result label="Peso estimado por idade" value={estWeight} unit="kg" note="(Fórmula: idade × 3 + 7 para > 5 anos)" color="yellow" />
+      {ageNum > 0 && estWeight && (
+        <Result label="Peso estimado por idade" value={estWeight} unit="kg" note="Fórmula: idade × 3 + 7 (> 5 anos)" color="yellow" />
       )}
 
       {fluidDay && (
@@ -186,7 +174,7 @@ function PediatricDose() {
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">RCP Pediátrica</p>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><span className="font-medium">Adrenalina:</span> <span className="text-blue-700 font-mono">{(wtNum * 0.01).toFixed(2)} mg IV/IO</span> <span className="text-gray-400">(0,01 mg/kg)</span></div>
-            <div><span className="font-medium">Profundidade RCP:</span> <span className="text-blue-700 font-mono">{comprDepth}</span></div>
+            <div><span className="font-medium">Compressões:</span> <span className="text-blue-700 font-mono">{comprDepth}</span></div>
             <div><span className="font-medium">Desfibrilhação:</span> <span className="text-blue-700 font-mono">{defibJoule}</span></div>
             <div><span className="font-medium">Amiodarona:</span> <span className="text-blue-700 font-mono">{(wtNum * 5).toFixed(0)} mg IV</span> <span className="text-gray-400">(5 mg/kg)</span></div>
             <div><span className="font-medium">Lorazepam (convulsão):</span> <span className="text-blue-700 font-mono">{Math.min(wtNum * 0.1, 4).toFixed(2)} mg IV</span></div>
@@ -226,10 +214,10 @@ function CockcroftGault() {
         ]} />
       </div>
       {crcl !== null && (
-        <Result label="Clearance de Creatinina (CrCl)" value={crcl} unit="mL/min" note={note} color={color} />
+        <Result label="CrCl (Cockcroft-Gault)" value={crcl} unit="mL/min" note={note} color={color} />
       )}
       <div className="text-xs text-gray-400 bg-gray-50 rounded p-2">
-        Fórmula: (140 − idade) × peso / (72 × Cr) × 0,85 se sexo feminino
+        Fórmula: (140 − idade) × peso / (72 × Cr) × 0,85 se feminino
       </div>
     </div>
   )
@@ -240,24 +228,24 @@ function RenalAdjustment() {
   const cr = parseFloat(crcl)
 
   const drugs = [
-    { name: 'Metformina',        c60: 'Normal',    c30: 'Reduzir 50%', c15: 'Suspender',     c0: 'Contraindicado' },
-    { name: 'Amoxicilina',       c60: 'Normal',    c30: 'Normal',      c15: '250 mg q12h',   c0: '250 mg q24h' },
-    { name: 'Ciprofloxacino',    c60: 'Normal',    c30: '250-500 mg q12h', c15: '250-500 mg q18h', c0: '250 mg q24h' },
-    { name: 'Gentamicina',       c60: 'Normal',    c30: 'Aumentar intervalo', c15: 'Evitar / nível sanguíneo', c0: 'Evitar' },
-    { name: 'Vancomicina',       c60: 'Normal',    c30: 'Nível sanguíneo', c15: 'Nível sanguíneo', c0: 'Nível sanguíneo' },
-    { name: 'Digoxina',          c60: 'Normal',    c30: '62,5 mcg/dia', c15: 'Evitar', c0: 'Evitar' },
-    { name: 'Enalapril',         c60: 'Normal',    c30: 'Reduzir 75%', c15: 'Evitar', c0: 'Evitar' },
-    { name: 'Lisinopril',        c60: 'Normal',    c30: '5 mg/dia',    c15: '2,5 mg/dia',    c0: 'Evitar' },
-    { name: 'Atenolol',          c60: 'Normal',    c30: '50 mg/dia',   c15: '25 mg/dia',     c0: '25 mg/48h' },
-    { name: 'Gabapentina',       c60: 'Normal',    c30: '300 mg q12h', c15: '300 mg q24h',   c0: '300 mg q24h (pós-diálise)' },
-    { name: 'Nitrofurantoína',   c60: 'Normal',    c30: 'Evitar (ineficaz)', c15: 'Evitar', c0: 'Evitar' },
-    { name: 'AAS (antiagregante)', c60: 'Normal',  c30: 'Normal',      c15: 'Usar com cautela', c0: 'Evitar' },
-    { name: 'Ibuprofeno / AINEs',c60: 'Cautela',   c30: 'Evitar',      c15: 'Evitar',        c0: 'Evitar' },
-    { name: 'Morfina',           c60: 'Normal',    c30: 'Reduzir 25%', c15: 'Reduzir 50%',   c0: 'Evitar' },
-    { name: 'Tramadol',          c60: 'Normal',    c30: 'q12h (não LP)', c15: 'q12h máx 200mg', c0: 'Evitar' },
-    { name: 'Alopurinol',        c60: '200 mg/dia', c30: '100 mg/dia', c15: '50 mg/dia',     c0: '50 mg/48h' },
-    { name: 'Dabigatrano',       c60: 'Normal',    c30: 'Contraindicado', c15: 'Contraindicado', c0: 'Contraindicado' },
-    { name: 'Rivaroxabano',      c60: 'Normal',    c30: 'Usar com cautela', c15: 'Contraindicado', c0: 'Contraindicado' },
+    { name: 'Metformina',          c60: 'Normal',           c30: 'Reduzir 50%',           c15: 'Suspender',               c0: 'Contraindicado' },
+    { name: 'Amoxicilina',         c60: 'Normal',           c30: 'Normal',                c15: '250 mg q12h',             c0: '250 mg q24h' },
+    { name: 'Ciprofloxacino',      c60: 'Normal',           c30: '250–500 mg q12h',       c15: '250–500 mg q18h',         c0: '250 mg q24h' },
+    { name: 'Gentamicina',         c60: 'Normal',           c30: 'Aumentar intervalo',    c15: 'Evitar / nível sérico',   c0: 'Evitar' },
+    { name: 'Vancomicina',         c60: 'Normal',           c30: 'Nível sérico',          c15: 'Nível sérico',            c0: 'Nível sérico' },
+    { name: 'Digoxina',            c60: 'Normal',           c30: '62,5 mcg/dia',          c15: 'Evitar',                  c0: 'Evitar' },
+    { name: 'Enalapril',           c60: 'Normal',           c30: 'Reduzir 75%',           c15: 'Evitar',                  c0: 'Evitar' },
+    { name: 'Lisinopril',          c60: 'Normal',           c30: '5 mg/dia',              c15: '2,5 mg/dia',              c0: 'Evitar' },
+    { name: 'Atenolol',            c60: 'Normal',           c30: '50 mg/dia',             c15: '25 mg/dia',               c0: '25 mg/48h' },
+    { name: 'Gabapentina',         c60: 'Normal',           c30: '300 mg q12h',           c15: '300 mg q24h',             c0: '300 mg (pós-diálise)' },
+    { name: 'Nitrofurantoína',     c60: 'Normal',           c30: 'Evitar (ineficaz)',     c15: 'Evitar',                  c0: 'Evitar' },
+    { name: 'AAS (antiagregante)', c60: 'Normal',           c30: 'Normal',                c15: 'Usar com cautela',        c0: 'Evitar' },
+    { name: 'Ibuprofeno / AINEs',  c60: 'Cautela',          c30: 'Evitar',                c15: 'Evitar',                  c0: 'Evitar' },
+    { name: 'Morfina',             c60: 'Normal',           c30: 'Reduzir 25%',           c15: 'Reduzir 50%',             c0: 'Evitar' },
+    { name: 'Tramadol',            c60: 'Normal',           c30: 'q12h (não LP)',         c15: 'q12h máx. 200 mg',        c0: 'Evitar' },
+    { name: 'Alopurinol',          c60: '200 mg/dia',       c30: '100 mg/dia',            c15: '50 mg/dia',               c0: '50 mg/48h' },
+    { name: 'Dabigatrano',         c60: 'Normal',           c30: 'Contraindicado',        c15: 'Contraindicado',          c0: 'Contraindicado' },
+    { name: 'Rivaroxabano',        c60: 'Normal',           c30: 'Usar com cautela',      c15: 'Contraindicado',          c0: 'Contraindicado' },
   ]
 
   function getDose(drug) {
@@ -268,7 +256,7 @@ function RenalAdjustment() {
     return { dose: drug.c0, color: 'red' }
   }
 
-  const dotColor = { green: 'bg-green-500', yellow: 'bg-yellow-500', orange: 'bg-orange-500', red: 'bg-red-500' }
+  const dotStyle = { green: '#22c55e', yellow: '#eab308', orange: '#f97316', red: '#ef4444' }
 
   return (
     <div className="space-y-4">
@@ -295,7 +283,7 @@ function RenalAdjustment() {
                     <td className="px-3 py-1.5 font-medium text-gray-700">{d.name}</td>
                     <td className="px-3 py-1.5">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor[r.color]}`}></span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: dotStyle[r.color] }}></span>
                         <span className="text-gray-600">{r.dose}</span>
                       </div>
                     </td>
@@ -306,20 +294,19 @@ function RenalAdjustment() {
           </table>
         </div>
       )}
-      <p className="text-xs text-gray-400">* Dados orientativos. Confirmar sempre na bula e fontes especializadas (Micromedex, UpToDate).</p>
+      <p className="text-xs text-gray-400">* Dados orientativos. Confirmar sempre na bula / fontes especializadas (Micromedex, UpToDate).</p>
     </div>
   )
 }
 
 function NaCorrection() {
-  const [na, setNa]       = useState('')
+  const [na, setNa]     = useState('')
   const [glucose, setGlucose] = useState('')
-  const [na_target, setNaTarget] = useState('140')
+  const na_target = '140'
 
   const naNum = parseFloat(na), glc = parseFloat(glucose)
   let corrNa = null, delta = null
   if (naNum && glc) {
-    // Cada 100 mg/dL de glicose acima de 100 reduz Na em 1,6 mEq/L (fórmula Katz)
     const excess = Math.max(glc - 100, 0) / 100
     corrNa = (naNum + excess * 1.6).toFixed(1)
     delta = (parseFloat(corrNa) - parseFloat(na_target)).toFixed(1)
@@ -329,12 +316,12 @@ function NaCorrection() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Sódio medido (mEq/L)"       value={na}      onChange={setNa}      step={0.1} placeholder="ex: 128" />
-        <Field label="Glicemia (mg/dL)"            value={glucose} onChange={setGlucose} step={1}   placeholder="ex: 450" />
+        <Field label="Sódio medido (mEq/L)"   value={na}      onChange={setNa}      step={0.1} placeholder="ex: 128" />
+        <Field label="Glicemia (mg/dL)"        value={glucose} onChange={setGlucose} step={1}   placeholder="ex: 450" />
       </div>
       {corrNa && (
         <div className="space-y-3">
-          <Result label="Sódio corrigido para glicemia" value={corrNa} unit="mEq/L" color={color}
+          <Result label="Sódio corrigido" value={corrNa} unit="mEq/L" color={color}
             note={`Diferença para alvo (${na_target} mEq/L): ${delta > 0 ? '+' : ''}${delta} mEq/L`} />
           <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
             Fórmula: Na⁺ corrigido = Na⁺ medido + 1,6 × [(Glicemia − 100) ÷ 100]
@@ -354,27 +341,21 @@ function CaCorrection() {
   if (caNum && albNum) {
     corrCa = (caNum + 0.8 * (4 - albNum)).toFixed(2)
     const v = parseFloat(corrCa)
-    if (v > 10.5)      color = 'red'
-    else if (v > 10.0) color = 'yellow'
-    else if (v < 8.5)  color = 'yellow'
-    else               color = 'green'
+    if (v > 10.5) color = 'red'
+    else if (v > 10.0 || v < 8.5) color = 'yellow'
+    else color = 'green'
   }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Cálcio total (mg/dL)"   value={ca}  onChange={setCa}  step={0.01} placeholder="ex: 7.8" />
-        <Field label="Albumina (g/dL)"         value={alb} onChange={setAlb} step={0.1}  placeholder="ex: 2.5" />
+        <Field label="Cálcio total (mg/dL)" value={ca}  onChange={setCa}  step={0.01} placeholder="ex: 7.8" />
+        <Field label="Albumina (g/dL)"       value={alb} onChange={setAlb} step={0.1}  placeholder="ex: 2.5" />
       </div>
       {corrCa && (
         <div className="space-y-3">
-          <Result
-            label="Cálcio corrigido"
-            value={corrCa}
-            unit="mg/dL"
-            color={color}
-            note={`Normal: 8,5–10,5 mg/dL. Albumina normal: 4,0 g/dL.`}
-          />
+          <Result label="Cálcio corrigido" value={corrCa} unit="mg/dL" color={color}
+            note="Normal: 8,5–10,5 mg/dL | Albumina normal: 4,0 g/dL" />
           <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
             Fórmula: Ca corrigido = Ca medido + 0,8 × (4,0 − Albumina)
           </div>
@@ -390,13 +371,13 @@ function OsmolarityCalc() {
   const [urea, setUrea]   = useState('')
   const [etanol, setEtanol] = useState('')
 
-  const naNum = parseFloat(na), glc = parseFloat(glucose), ureaN = parseFloat(urea)
+  const naNum = parseFloat(na)
   let osm = null, color = 'green'
   if (naNum) {
     osm = 2 * naNum
-    if (glc) osm += glc / 18
-    if (ureaN) osm += ureaN / 2.8
-    if (parseFloat(etanol)) osm += parseFloat(etanol) / 4.6
+    if (parseFloat(glucose)) osm += parseFloat(glucose) / 18
+    if (parseFloat(urea))    osm += parseFloat(urea) / 2.8
+    if (parseFloat(etanol))  osm += parseFloat(etanol) / 4.6
     osm = osm.toFixed(0)
     const v = parseFloat(osm)
     if (v > 320)      color = 'red'
@@ -408,20 +389,127 @@ function OsmolarityCalc() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Sódio (mEq/L)"       value={na}      onChange={setNa}      step={0.1} placeholder="ex: 140" />
-        <Field label="Glicemia (mg/dL)"    value={glucose} onChange={setGlucose} step={1}   placeholder="ex: 100" />
-        <Field label="Ureia (mg/dL)"       value={urea}    onChange={setUrea}    step={0.1} placeholder="ex: 14" />
+        <Field label="Sódio (mEq/L)"    value={na}      onChange={setNa}      step={0.1} placeholder="ex: 140" />
+        <Field label="Glicemia (mg/dL)" value={glucose} onChange={setGlucose} step={1}   placeholder="ex: 100" />
+        <Field label="Ureia (mg/dL)"    value={urea}    onChange={setUrea}    step={0.1} placeholder="ex: 14" />
         <Field label="Etanol (mg/dL) — opcional" value={etanol} onChange={setEtanol} step={1} placeholder="ex: 0" />
       </div>
       {osm && (
         <div className="space-y-2">
-          <Result label="Osmolalidade calculada" value={osm} unit="mOsm/kg" color={color}
-            note="Normal: 280–295 mOsm/kg" />
+          <Result label="Osmolalidade calculada" value={osm} unit="mOsm/kg" color={color} note="Normal: 280–295 mOsm/kg" />
           <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
             Fórmula: 2×Na⁺ + Glicemia/18 + Ureia/2,8 [+ Etanol/4,6]
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function AnionGap() {
+  const [na, setNa]   = useState('')
+  const [cl, setCl]   = useState('')
+  const [hco3, setHco3] = useState('')
+  const [alb, setAlb]   = useState('')
+
+  const naNum = parseFloat(na), clNum = parseFloat(cl), hco3Num = parseFloat(hco3), albNum = parseFloat(alb)
+  let ag = null, agCorr = null, deltaRatio = null, colorAg = 'green', colorDelta = 'blue'
+
+  if (naNum && clNum && hco3Num) {
+    ag = Math.round(naNum - clNum - hco3Num)
+    colorAg = ag > 20 ? 'red' : ag > 12 ? 'yellow' : 'green'
+
+    if (albNum) {
+      agCorr = Math.round(ag + 2.5 * (4.0 - albNum))
+      if (agCorr > 12) {
+        const deltaAG = agCorr - 12
+        const deltaBicarb = 24 - hco3Num
+        deltaRatio = (deltaAG / deltaBicarb).toFixed(2)
+        if (parseFloat(deltaRatio) < 0.4)       colorDelta = 'yellow'
+        else if (parseFloat(deltaRatio) < 1.0)  colorDelta = 'yellow'
+        else if (parseFloat(deltaRatio) <= 2.0) colorDelta = 'green'
+        else                                     colorDelta = 'orange'
+      }
+    }
+  }
+
+  const deltaInterp = deltaRatio
+    ? parseFloat(deltaRatio) < 0.4  ? 'AG baixo (não AG acidose mista)'
+    : parseFloat(deltaRatio) < 1.0  ? '< 1 — AG acidose + acidose não-AG'
+    : parseFloat(deltaRatio) <= 2.0 ? '1–2 — AG acidose pura'
+    : '> 2 — AG acidose + alcalose metabólica'
+    : null
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Sódio — Na⁺ (mEq/L)"       value={na}   onChange={setNa}   step={0.1} placeholder="ex: 140" />
+        <Field label="Cloro — Cl⁻ (mEq/L)"        value={cl}   onChange={setCl}   step={0.1} placeholder="ex: 105" />
+        <Field label="Bicarbonato — HCO₃⁻ (mEq/L)" value={hco3} onChange={setHco3} step={0.1} placeholder="ex: 15" />
+        <Field label="Albumina (g/dL) — opcional"  value={alb}  onChange={setAlb}  step={0.1} placeholder="ex: 3.0" />
+      </div>
+      {ag !== null && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Result label="Anion Gap" value={ag} unit="mEq/L" color={colorAg}
+              note={ag > 12 ? 'AG elevado (> 12) — KUSMALE: Cetoacidose, Uraemia, Salicilatos, Metanol, Acidose láctica, Etilenoglicol' : 'AG normal (≤ 12)'} />
+            {agCorr !== null && agCorr !== ag && (
+              <Result label="AG corrigido para albumina" value={agCorr} unit="mEq/L" color={colorAg}
+                note={`AG aumenta 2,5 por cada 1 g/dL que alb está abaixo de 4`} />
+            )}
+          </div>
+          {deltaRatio && (
+            <Result label="Delta-Delta (ΔAG / ΔHCO₃⁻)" value={deltaRatio} unit="" color={colorDelta}
+              note={deltaInterp} />
+          )}
+          <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
+            AG = Na⁺ − (Cl⁻ + HCO₃⁻) | Normal: 8–12 mEq/L | AG corrigido: AG + 2,5 × (4 − Alb)
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function QTcCalc() {
+  const [qt, setQt]   = useState('')
+  const [hr, setHr]   = useState('')
+  const [sex, setSex] = useState('M')
+
+  const qtNum = parseFloat(qt)
+  const hrNum = parseFloat(hr)
+  const rrSec = hrNum ? 60 / hrNum : null
+  let qtc = null, color = 'green', note = ''
+
+  if (qtNum && rrSec) {
+    qtc = Math.round(qtNum / Math.sqrt(rrSec))
+    const limit = sex === 'F' ? 450 : 440
+    if (qtc > 500)       { color = 'red';    note = 'QTc muito prolongado — alto risco Torsades de Pointes' }
+    else if (qtc > 470)  { color = 'orange'; note = 'QTc prolongado — rever medicação, corrigir electrólitos' }
+    else if (qtc > limit){ color = 'yellow'; note = `QTc borderline (> ${limit} ms em ${sex === 'F' ? 'mulher' : 'homem'}) — monitorizar` }
+    else                 { color = 'green';  note = 'QTc normal' }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-4">
+        <Field label="QT medido (ms)" value={qt} onChange={setQt} step={1} placeholder="ex: 420" />
+        <Field label="FC (bpm)"       value={hr} onChange={setHr} step={1} placeholder="ex: 70" />
+        <Select label="Sexo" value={sex} onChange={setSex} options={[
+          { value: 'M', label: 'Masculino' }, { value: 'F', label: 'Feminino' },
+        ]} />
+      </div>
+      {qtc && (
+        <div className="space-y-2">
+          <Result label="QTc (Fórmula de Bazett)" value={qtc} unit="ms" note={note} color={color} />
+          <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
+            QTc = QT / √(RR em segundos) | Limites: homem &lt; 440 ms | mulher &lt; 450 ms | &gt; 500 ms: alto risco Torsades
+          </div>
+        </div>
+      )}
+      <div className="text-xs text-gray-400 bg-amber-50 border border-amber-200 rounded p-2">
+        QT-prolongers comuns: eritromicina, azitromicina, fluconazol, haloperidol, quetiapina, metadona, ondansetron, hidroxicloroquina
+      </div>
     </div>
   )
 }
@@ -446,10 +534,10 @@ function BMI() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Peso (kg)"      value={weight} onChange={setWeight} step={0.5} placeholder="ex: 80" />
-        <Field label="Altura (cm)"    value={height} onChange={setHeight} step={1}   placeholder="ex: 175" />
+        <Field label="Peso (kg)"   value={weight} onChange={setWeight} step={0.5} placeholder="ex: 80" />
+        <Field label="Altura (cm)" value={height} onChange={setHeight} step={1}   placeholder="ex: 175" />
       </div>
-      {bmi && <Result label="Índice de Massa Corporal (IMC)" value={bmi} unit="kg/m²" note={cat} color={color} />}
+      {bmi && <Result label="Índice de Massa Corporal" value={bmi} unit="kg/m²" note={cat} color={color} />}
     </div>
   )
 }
@@ -461,16 +549,16 @@ function IBW() {
   const h = parseFloat(height)
   let ibw = null
   if (h) {
-    // Devine formula (altura em cm → polegadas: h/2.54)
     const hInches = h / 2.54
-    if (sex === 'M') ibw = Math.round(50 + 2.3 * (hInches - 60))
-    else             ibw = Math.round(45.5 + 2.3 * (hInches - 60))
+    ibw = sex === 'M'
+      ? Math.round(50 + 2.3 * (hInches - 60))
+      : Math.round(45.5 + 2.3 * (hInches - 60))
   }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Altura (cm)"  value={height} onChange={setHeight} step={1} placeholder="ex: 170" />
+        <Field label="Altura (cm)" value={height} onChange={setHeight} step={1} placeholder="ex: 170" />
         <Select label="Sexo" value={sex} onChange={setSex} options={[
           { value: 'M', label: 'Masculino' }, { value: 'F', label: 'Feminino' },
         ]} />
@@ -478,7 +566,7 @@ function IBW() {
       {ibw && (
         <div className="space-y-2">
           <Result label="Peso Ideal (Fórmula de Devine)" value={ibw} unit="kg" color="blue"
-            note="Usado para doses em doentes obesos (ex: gentamicina, vancomicina)" />
+            note="Usado para doses em doentes obesos (gentamicina, vancomicina, volumes de ventilação)" />
           <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
             Homem: 50 + 2,3 × (altura em pol. − 60) | Mulher: 45,5 + 2,3 × (altura em pol. − 60)
           </div>
@@ -491,7 +579,6 @@ function IBW() {
 function MAPCalc() {
   const [sbp, setSbp] = useState('')
   const [dbp, setDbp] = useState('')
-  const [hr,  setHr]  = useState('')
 
   const s = parseFloat(sbp), d = parseFloat(dbp)
   const map = s && d ? ((s + 2 * d) / 3).toFixed(0) : null
@@ -500,81 +587,123 @@ function MAPCalc() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-4">
-        <Field label="PAS (mmHg)"  value={sbp} onChange={setSbp} step={1} placeholder="ex: 120" />
-        <Field label="PAD (mmHg)"  value={dbp} onChange={setDbp} step={1} placeholder="ex: 80" />
-        <Field label="FC (bpm) — opcional" value={hr} onChange={setHr} step={1} placeholder="ex: 75" />
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="PAS (mmHg)" value={sbp} onChange={setSbp} step={1} placeholder="ex: 120" />
+        <Field label="PAD (mmHg)" value={dbp} onChange={setDbp} step={1} placeholder="ex: 80" />
       </div>
       {map && (
         <div className="grid grid-cols-2 gap-3">
           <Result label="Pressão Arterial Média (PAM)" value={map} unit="mmHg"
-            note={parseFloat(map) < 65 ? 'Abaixo do alvo sépsis (< 65)' : 'PAM normal (alvo sépsis: ≥ 65)'}
+            note={parseFloat(map) < 65 ? '⚠ Abaixo do alvo sépsis (< 65)' : 'Alvo sépsis: ≥ 65 mmHg'}
             color={color} />
           <Result label="Pressão de Pulso (PP)" value={pp} unit="mmHg"
-            note="Normal: 40 mmHg. >60: elevado (rigidez aórtica)" color="blue" />
+            note="Normal: ~40 mmHg. > 60: rigidez aórtica" color="blue" />
         </div>
       )}
     </div>
   )
 }
 
-// ─── Mapa de calculadores ────────────────────────────────────────────────────
-const CALCS = {
-  dose_weight:    { name: 'Dose por Peso',              desc: 'Calcular dose total a partir de mg/kg',      component: DoseByWeight },
-  infusion_rate:  { name: 'Velocidade de Perfusão',     desc: 'Dose total, concentração e duração → mL/h', component: InfusionRate },
-  pediatric_dose: { name: 'Doses Pediátricas',          desc: 'Fluidos, RCP e fármacos pediátricos',       component: PediatricDose },
-  cockcroft:      { name: 'Cockcroft-Gault (CrCl)',     desc: 'Clearance de creatinina estimada',          component: CockcroftGault },
-  renal_adjust:   { name: 'Ajuste Renal de Fármacos',   desc: 'Doses conforme função renal (CrCl)',        component: RenalAdjustment },
-  na_correction:  { name: 'Correção do Sódio',          desc: 'Na⁺ corrigido para hiperglicemia',          component: NaCorrection },
-  ca_correction:  { name: 'Correção do Cálcio',         desc: 'Ca²⁺ total corrigido para albumina',        component: CaCorrection },
-  osmolarity:     { name: 'Osmolalidade Plasmática',    desc: 'Osmolalidade calculada (Na, glicose, ureia)',component: OsmolarityCalc },
-  bmi:            { name: 'IMC',                        desc: 'Índice de Massa Corporal e classificação',  component: BMI },
-  ibw:            { name: 'Peso Ideal',                 desc: 'Fórmula de Devine para dosagem',            component: IBW },
-  map_calc:       { name: 'PAM e Pressão de Pulso',     desc: 'Pressão arterial média a partir de PAS/PAD',component: MAPCalc },
+function SteroidEquiv() {
+  const [drug, setDrug] = useState('prednisolona')
+  const [dose, setDose] = useState('')
+
+  const steroids = [
+    { id: 'hidrocortisona',    name: 'Hidrocortisona',      equiv: 20,   potGluco: 1,   potMiner: 1,   th: '8–12h',  via: 'IV/PO' },
+    { id: 'prednisolona',      name: 'Prednisolona',        equiv: 5,    potGluco: 4,   potMiner: 0.8, th: '18–36h', via: 'PO' },
+    { id: 'prednisona',        name: 'Prednisona',          equiv: 5,    potGluco: 4,   potMiner: 0.8, th: '18–36h', via: 'PO' },
+    { id: 'metilprednisolona', name: 'Metilprednisolona',   equiv: 4,    potGluco: 5,   potMiner: 0.5, th: '18–36h', via: 'IV/PO' },
+    { id: 'dexametasona',      name: 'Dexametasona',        equiv: 0.75, potGluco: 25,  potMiner: 0,   th: '36–54h', via: 'IV/PO' },
+    { id: 'betametasona',      name: 'Betametasona',        equiv: 0.6,  potGluco: 25,  potMiner: 0,   th: '36–54h', via: 'IV/PO' },
+    { id: 'fludrocortisona',   name: 'Fludrocortisona',     equiv: 0.1,  potGluco: 10,  potMiner: 125, th: '18–36h', via: 'PO' },
+  ]
+
+  const base = steroids.find(s => s.id === drug)
+  const doseNum = parseFloat(dose)
+  const baseUnits = base && doseNum ? doseNum / base.equiv : null
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <Select label="Corticoide de origem" value={drug} onChange={setDrug}
+          options={steroids.map(s => ({ value: s.id, label: s.name }))} />
+        <Field label="Dose (mg)" value={dose} onChange={setDose} step={0.5} placeholder="ex: 20" />
+      </div>
+      {baseUnits && (
+        <div className="overflow-hidden rounded-xl border border-gray-200">
+          <div className="bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Equivalências de {base.name} {doseNum} mg
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 text-xs border-b">
+                <th className="text-left px-3 py-2">Fármaco</th>
+                <th className="text-left px-3 py-2">Dose equiv.</th>
+                <th className="text-left px-3 py-2 hidden sm:table-cell">Potência GC</th>
+                <th className="text-left px-3 py-2 hidden sm:table-cell">t½</th>
+              </tr>
+            </thead>
+            <tbody>
+              {steroids.map((s, i) => {
+                const eqDose = (baseUnits * s.equiv).toFixed(2)
+                const isCurrent = s.id === drug
+                return (
+                  <tr key={i} className={`${isCurrent ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <td className={`px-3 py-1.5 font-medium ${isCurrent ? 'text-blue-700' : 'text-gray-700'}`}>{s.name}</td>
+                    <td className={`px-3 py-1.5 font-mono font-semibold ${isCurrent ? 'text-blue-700' : 'text-gray-800'}`}>{eqDose} mg</td>
+                    <td className="px-3 py-1.5 text-gray-500 hidden sm:table-cell">{s.potGluco}×</td>
+                    <td className="px-3 py-1.5 text-gray-500 hidden sm:table-cell">{s.th}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="text-xs text-gray-400 bg-gray-50 rounded p-2">
+        Potência glucocorticoide relativa à hidrocortisona. Potência mineralocorticoide não incluída na tabela.
+      </div>
+    </div>
+  )
 }
 
-export default function CalculatorsPage() {
-  const [activeId, setActiveId] = useState('dose_weight')
+// ─── Mapa de calculadores ────────────────────────────────────────────────────
+
+const CALCS = {
+  dose_weight:    { name: 'Dose por Peso',              desc: 'Calcular dose total a partir de mg/kg',            component: DoseByWeight },
+  infusion_rate:  { name: 'Velocidade de Perfusão',     desc: 'Dose total, concentração e duração → mL/h',       component: InfusionRate },
+  pediatric_dose: { name: 'Doses Pediátricas',          desc: 'Fluidos (Holliday-Segar) e RCP pediátrica',       component: PediatricDose },
+  cockcroft:      { name: 'Cockcroft-Gault',            desc: 'Clearance de creatinina estimada',                component: CockcroftGault },
+  renal_adjust:   { name: 'Ajuste Renal de Fármacos',   desc: 'Doses conforme função renal (CrCl)',              component: RenalAdjustment },
+  na_correction:  { name: 'Correção do Sódio',          desc: 'Na⁺ corrigido para hiperglicemia',                component: NaCorrection },
+  ca_correction:  { name: 'Correção do Cálcio',         desc: 'Ca²⁺ total corrigido para albumina',              component: CaCorrection },
+  osmolarity:     { name: 'Osmolalidade Plasmática',    desc: 'Osmolalidade calculada (Na, glicose, ureia)',     component: OsmolarityCalc },
+  anion_gap:      { name: 'Anion Gap',                  desc: 'AG, AG corrigido para albumina e Delta-Delta',    component: AnionGap },
+  qtc_calc:       { name: 'QTc (Bazett)',               desc: 'QT corrigido para frequência cardíaca',           component: QTcCalc },
+  bmi:            { name: 'IMC',                        desc: 'Índice de Massa Corporal e classificação OMS',    component: BMI },
+  ibw:            { name: 'Peso Ideal (Devine)',         desc: 'Peso ideal para cálculo de doses',               component: IBW },
+  map_calc:       { name: 'PAM e Pressão de Pulso',     desc: 'Pressão arterial média a partir de PAS/PAD',     component: MAPCalc },
+  steroid_equiv:  { name: 'Equivalência Corticoides',   desc: 'Doses equipotentes entre corticosteroides',      component: SteroidEquiv },
+}
+
+export default function CalculatorsPage({ activeId }) {
   const calc = CALCS[activeId]
   const Component = calc?.component
 
-  return (
-    <div className="flex h-full overflow-hidden">
-      {/* Left panel */}
-      <div className="w-56 shrink-0 border-r border-gray-200 bg-white overflow-y-auto">
-        {CALC_GROUPS.map(g => (
-          <div key={g.id}>
-            <div className="px-3 pt-3 pb-1 flex items-center gap-1.5">
-              <span className="text-sm">{g.icon}</span>
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{g.label}</span>
-            </div>
-            {g.items.map(cid => (
-              <button
-                key={cid}
-                onClick={() => setActiveId(cid)}
-                className={`w-full text-left px-4 py-2 text-sm transition-colors
-                  ${activeId === cid ? 'bg-teal-50 text-teal-700 font-semibold border-r-2 border-teal-600' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                {CALCS[cid]?.name}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
+  if (!calc) return (
+    <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+      Selecione um calculador na barra lateral
+    </div>
+  )
 
-      {/* Right panel */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {calc && (
-          <>
-            <div className="mb-5">
-              <h2 className="text-xl font-bold text-gray-800">{calc.name}</h2>
-              <p className="text-sm text-gray-500">{calc.desc}</p>
-            </div>
-            <div className="max-w-2xl">
-              <Component key={activeId} />
-            </div>
-          </>
-        )}
+  return (
+    <div className="h-full overflow-y-auto p-6">
+      <div className="mb-5">
+        <h2 className="text-xl font-bold text-gray-800">{calc.name}</h2>
+        <p className="text-sm text-gray-500">{calc.desc}</p>
+      </div>
+      <div className="max-w-2xl">
+        <Component key={activeId} />
       </div>
     </div>
   )

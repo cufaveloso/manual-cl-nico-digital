@@ -1,12 +1,143 @@
 import React, { useState } from 'react'
 
 const MODULES = [
-  { id: 'prescriptions', label: 'Receitas',    icon: '📋' },
-  { id: 'scores',        label: 'Scores',      icon: '🧮' },
-  { id: 'emergencies',   label: 'Emergência',  icon: '🚨' },
-  { id: 'calculators',   label: 'Doses',       icon: '💊' },
-  { id: 'summaries',     label: 'Resumos',     icon: '📖' },
+  { id: 'prescriptions', label: 'Receitas',   icon: '📋' },
+  { id: 'scores',        label: 'Scores',     icon: '🧮' },
+  { id: 'emergencies',   label: 'Emergência', icon: '🚨' },
+  { id: 'calculators',   label: 'Doses',      icon: '💊' },
+  { id: 'summaries',     label: 'Resumos',    icon: '📖' },
 ]
+
+// ─── Nav data (mirrors page definitions) ────────────────────────────────────
+
+const SCORE_NAV = [
+  { id: 'cardio',  label: 'Cardiologia',   icon: '❤️', items: [
+    { id: 'chads_vasc',  name: 'CHA₂DS₂-VASc' },
+    { id: 'has_bled',    name: 'HAS-BLED' },
+    { id: 'heart_score', name: 'HEART Score' },
+  ]},
+  { id: 'sepsis',  label: 'Sépsis / UCI',  icon: '🏥', items: [
+    { id: 'qsofa', name: 'qSOFA' },
+    { id: 'sofa',  name: 'SOFA' },
+  ]},
+  { id: 'monitor', label: 'Monitorização', icon: '📊', items: [
+    { id: 'news2',   name: 'NEWS2' },
+    { id: 'glasgow', name: 'Glasgow' },
+  ]},
+  { id: 'pulmo',   label: 'Pneumologia',   icon: '🫁', items: [
+    { id: 'curb65', name: 'CURB-65' },
+  ]},
+  { id: 'hepato',  label: 'Hepatologia',   icon: '🫀', items: [
+    { id: 'meld',       name: 'MELD' },
+    { id: 'child_pugh', name: 'Child-Pugh' },
+  ]},
+  { id: 'thrombo', label: 'Trombose',      icon: '🩸', items: [
+    { id: 'wells_dvt', name: 'Wells TVP' },
+    { id: 'wells_pe',  name: 'Wells TEP' },
+  ]},
+  { id: 'renal',   label: 'Nefrologia',    icon: '💧', items: [
+    { id: 'ckd_epi', name: 'CKD-EPI 2021' },
+  ]},
+  { id: 'neuro',   label: 'Neurologia',    icon: '🧠', items: [
+    { id: 'nihss', name: 'NIHSS' },
+    { id: 'abcd2', name: 'ABCD²' },
+  ]},
+  { id: 'psych',   label: 'Psiquiatria',   icon: '🧩', items: [
+    { id: 'phq9', name: 'PHQ-9' },
+  ]},
+]
+
+const EMERGENCY_NAV = [
+  { id: 'cardiac',  label: 'Cardiologia',  icon: '❤️', items: [
+    { id: 'pcr',         name: 'PCR / ACLS' },
+    { id: 'eap',         name: 'Edema Agudo Pulmão' },
+    { id: 'crise_htn',   name: 'Crise Hipertensiva' },
+    { id: 'tep_massivo', name: 'TEP Maciço' },
+    { id: 'arritmia_fa', name: 'Fibrilhação Auricular' },
+    { id: 'tv',          name: 'Taquicardia Ventricular' },
+  ]},
+  { id: 'neuro',    label: 'Neurologia',   icon: '🧠', items: [
+    { id: 'avc_isquemico',   name: 'AVC Isquémico' },
+    { id: 'avc_hemorragico', name: 'AVC Hemorrágico' },
+    { id: 'status_epilepticus', name: 'Status Epilepticus' },
+  ]},
+  { id: 'metabolic',label: 'Metabólica',   icon: '🧪', items: [
+    { id: 'cad',               name: 'CAD / CAH' },
+    { id: 'hipercaliemia',     name: 'Hipercaliemia' },
+    { id: 'hipoglicemia_grave',name: 'Hipoglicemia Grave' },
+  ]},
+  { id: 'sepsis',   label: 'Sépsis',       icon: '🦠', items: [
+    { id: 'sepsis_bundle', name: 'Bundle de Sépsis' },
+  ]},
+  { id: 'resp',     label: 'Respiratório', icon: '🫁', items: [
+    { id: 'broncoespasmo', name: 'Broncoespasmo Grave' },
+    { id: 'pneumotorax',   name: 'Pneumotórax Hipertensivo' },
+  ]},
+  { id: 'allergic', label: 'Alérgico',     icon: '⚠️', items: [
+    { id: 'anafilaxia', name: 'Anafilaxia' },
+  ]},
+  { id: 'intox',    label: 'Intoxicações', icon: '☠️', items: [
+    { id: 'intox_paracetamol', name: 'Paracetamol' },
+    { id: 'intox_opioides',    name: 'Opioides / BZD' },
+  ]},
+]
+
+const CALC_NAV = [
+  { id: 'dose',   label: 'Dose',          icon: '💊', items: [
+    { id: 'dose_weight',    name: 'Dose por Peso' },
+    { id: 'infusion_rate',  name: 'Velocidade de Perfusão' },
+    { id: 'pediatric_dose', name: 'Doses Pediátricas' },
+  ]},
+  { id: 'renal',  label: 'Renal',         icon: '💧', items: [
+    { id: 'cockcroft',    name: 'Cockcroft-Gault' },
+    { id: 'renal_adjust', name: 'Ajuste Renal' },
+  ]},
+  { id: 'electro',label: 'Electrólitos',  icon: '🧪', items: [
+    { id: 'na_correction', name: 'Correção do Sódio' },
+    { id: 'ca_correction', name: 'Correção do Cálcio' },
+    { id: 'osmolarity',    name: 'Osmolalidade' },
+    { id: 'anion_gap',     name: 'Anion Gap' },
+  ]},
+  { id: 'cardio', label: 'Cardiologia',   icon: '❤️', items: [
+    { id: 'qtc_calc', name: 'QTc (Bazett)' },
+  ]},
+  { id: 'other',  label: 'Outros',        icon: '📐', items: [
+    { id: 'bmi',           name: 'IMC' },
+    { id: 'ibw',           name: 'Peso Ideal' },
+    { id: 'map_calc',      name: 'PAM e Pressão de Pulso' },
+    { id: 'steroid_equiv', name: 'Equivalência Corticoides' },
+  ]},
+]
+
+// ─── Generic nav renderer ─────────────────────────────────────────────────────
+
+function GenericNav({ groups, activeId, onSelect, activeClass }) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {groups.map(g => (
+        <div key={g.id}>
+          <div className="px-3 pt-3 pb-1 flex items-center gap-1.5">
+            <span className="text-sm">{g.icon}</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{g.label}</span>
+          </div>
+          {g.items.map(item => (
+            <button
+              key={item.id}
+              onClick={() => onSelect(item.id)}
+              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                activeId === item.id ? activeClass : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Prescription sub-nav ─────────────────────────────────────────────────────
 
 function PrescriptionNav({ categories, selectedCategoryId, onSelectCategory, onAddCategory, onEditCategory, onDeleteCategory }) {
   const [newName, setNewName] = useState('')
@@ -134,10 +265,15 @@ function PrescriptionNav({ categories, selectedCategoryId, onSelectCategory, onA
   )
 }
 
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+
 export default function Sidebar({
   activeModule, onModuleChange,
   categories, selectedCategoryId,
-  onSelectCategory, onAddCategory, onEditCategory, onDeleteCategory
+  onSelectCategory, onAddCategory, onEditCategory, onDeleteCategory,
+  activeScore, onSelectScore,
+  activeEmergency, onSelectEmergency,
+  activeCalc, onSelectCalc,
 }) {
   return (
     <aside className="w-60 bg-white border-r border-gray-200 flex flex-col shrink-0 overflow-hidden">
@@ -177,28 +313,34 @@ export default function Sidebar({
             onDeleteCategory={onDeleteCategory}
           />
         )}
-
         {activeModule === 'scores' && (
-          <div className="p-3 text-xs text-gray-500 text-center pt-6">
-            Selecione um score no painel principal
-          </div>
+          <GenericNav
+            groups={SCORE_NAV}
+            activeId={activeScore}
+            onSelect={onSelectScore}
+            activeClass="bg-blue-50 text-blue-700 font-semibold border-r-2 border-blue-600"
+          />
         )}
-
         {activeModule === 'emergencies' && (
-          <div className="p-3 text-xs text-gray-500 text-center pt-6">
-            Selecione uma emergência no painel
-          </div>
+          <GenericNav
+            groups={EMERGENCY_NAV}
+            activeId={activeEmergency}
+            onSelect={onSelectEmergency}
+            activeClass="bg-red-50 text-red-700 font-semibold border-r-2 border-red-500"
+          />
         )}
-
         {activeModule === 'calculators' && (
-          <div className="p-3 text-xs text-gray-500 text-center pt-6">
-            Selecione um calculador no painel
-          </div>
+          <GenericNav
+            groups={CALC_NAV}
+            activeId={activeCalc}
+            onSelect={onSelectCalc}
+            activeClass="bg-teal-50 text-teal-700 font-semibold border-r-2 border-teal-600"
+          />
         )}
-
         {activeModule === 'summaries' && (
-          <div className="p-3 text-xs text-gray-500 text-center pt-6">
-            Resumos de referência rápida
+          <div className="p-4 text-center pt-8">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Resumos</p>
+            <p className="text-xs text-gray-400">Referência rápida por tema</p>
           </div>
         )}
       </div>

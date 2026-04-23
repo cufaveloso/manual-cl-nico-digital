@@ -10,6 +10,9 @@ import { api } from './api.js'
 
 export default function App() {
   const [activeModule, setActiveModule] = useState('prescriptions')
+  const [activeScore, setActiveScore] = useState('chads_vasc')
+  const [activeEmergency, setActiveEmergency] = useState('pcr')
+  const [activeCalc, setActiveCalc] = useState('dose_weight')
 
   // ── Prescription state ──
   const [categories, setCategories] = useState([])
@@ -97,6 +100,9 @@ export default function App() {
         onAddCategory={handleAddCategory}
         onEditCategory={handleEditCategory}
         onDeleteCategory={handleDeleteCategory}
+        activeScore={activeScore} onSelectScore={setActiveScore}
+        activeEmergency={activeEmergency} onSelectEmergency={setActiveEmergency}
+        activeCalc={activeCalc} onSelectCalc={setActiveCalc}
       />
 
       <div className="flex-1 overflow-hidden flex flex-col">
@@ -162,9 +168,9 @@ export default function App() {
           </>
         )}
 
-        {activeModule === 'scores'       && <ScoresPage />}
-        {activeModule === 'emergencies'  && <EmergencyPage />}
-        {activeModule === 'calculators'  && <CalculatorsPage />}
+        {activeModule === 'scores'       && <ScoresPage activeId={activeScore} />}
+        {activeModule === 'emergencies'  && <EmergencyPage activeId={activeEmergency} />}
+        {activeModule === 'calculators'  && <CalculatorsPage activeId={activeCalc} />}
         {activeModule === 'summaries'    && <SummariesPage />}
       </div>
 
